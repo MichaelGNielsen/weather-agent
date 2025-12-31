@@ -138,6 +138,8 @@ curl https://api.anthropic.com/v1/messages \
 ## agent output
 
 ````bash
+# default by er Aalborg
+
 > python3 agent_anthropic.py
 
 === FØRSTE RESPONS ===
@@ -157,4 +159,27 @@ Her er en kort opsummering af vejret i Aalborg i dag:
 - **Vejrforhold:** Hovedsageligt klart (vejrkode 1 indikerer klart eller næsten klart vejr)
 
 Det er altså ret koldt i Aalborg i dag med temperaturer lige over frysepunktet, og der er en del vind. Vejret er dog pænt med hovedsageligt klar himmel.
+
+
+# eller med input
+
+> python3 agent_anthropic.py aarhus
+
+=== FØRSTE RESPONS ===
+Stop reason: tool_use
+Content: [TextBlock(citations=None, text='Jeg henter vejroplysningerne for Aarhus for dig.', type='text'), ToolUseBlock(id='toolu_014oz8AMykpJPzJrtEXM2J9y', input={'city': 'Aarhus'}, name='get_weather', type='tool_use')]
+
+=== TOOL CALL: get_weather ===
+Input: {'city': 'Aarhus'}
+Result: {'city': 'Aarhus', 'temperature': 1.8, 'wind_speed': 14.4, 'weather_code': 1}
+
+=== ENDELIGT SVAR ===
+Her er en kort vejroversigt for Aarhus i dag:
+
+**Vejret i Aarhus:**
+- **Temperatur:** 1.8°C
+- **Vindhastighed:** 14.4 km/t
+- **Vejrforhold:** Overvejende klart (vejrkode 1)
+
+Det er altså en kølig dag med let frost, moderat vind og overvejende klart vejr. Husk at klæde dig varmt på, hvis du skal ud!
 ````

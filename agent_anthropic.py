@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from anthropic import Anthropic
 import requests
@@ -11,30 +12,32 @@ if not api_key:
 client = Anthropic(api_key=api_key)
 
 # Funktion til at hente vejrdata
-def get_weather(city: str) -> dict:
+def get_weather(city: str = "Aalborg") -> dict:
     """Henter vejrdata fra Open-Meteo API"""
-    # Koordinater for Aalborg
-    coordinates = {
-        "aalborg": {"lat": 57.048, "lon": 9.9187}
-    }
-
-    city_lower = city.lower()
-    if city_lower not in coordinates:
-        return {"error": f"Kender ikke koordinater for {city}"}
-
-    lat = coordinates[city_lower]["lat"]
-    lon = coordinates[city_lower]["lon"]
-
-    # Open-Meteo API (gratis, ingen API-nøgle nødvendig)
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,windspeed_10m,weathercode&timezone=Europe/Copenhagen"
-
     try:
+        # Slå koordinater op via Geocoding API
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1&language=en&format=json"
+        geo_response = requests.get(geo_url)
+        geo_response.raise_for_status()
+        geo_data = geo_response.json()
+
+        if "results" not in geo_data or not geo_data["results"]:
+            return {"error": f"Kunne ikke finde koordinater for {city}"}
+
+        location = geo_data["results"][0]
+        lat = location["latitude"]
+        lon = location["longitude"]
+        found_name = location["name"]
+
+        # Open-Meteo API (gratis, ingen API-nøgle nødvendig)
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,windspeed_10m,weathercode&timezone=Europe/Copenhagen"
+
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
 
         return {
-            "city": city,
+            "city": found_name,
             "temperature": data["current"]["temperature_2m"],
             "wind_speed": data["current"]["windspeed_10m"],
             "weather_code": data["current"]["weathercode"]
@@ -54,14 +57,17 @@ tools = [
                     "type": "string",
                     "description": "Navnet på byen, f.eks. 'Aalborg'"
                 }
-            },
-            "required": ["city"]
+            }
         }
     }
 ]
 
 # Første API-kald
-prompt = "Hej, kan du skrive en kort opsummering af vejret i Aalborg i dag?"
+if len(sys.argv) > 1:
+    city_arg = " ".join(sys.argv[1:])
+    prompt = f"Hej, kan du skrive en kort opsummering af vejret i {city_arg} i dag?"
+else:
+    prompt = "Hej, kan du skrive en kort opsummering af vejret i Aalborg i dag?"
 
 response = client.messages.create(
     model="claude-sonnet-4-20250514",
@@ -87,7 +93,7 @@ while response.stop_reason == "tool_use":
 
     # Kald funktionen
     if tool_name == "get_weather":
-        tool_result = get_weather(tool_input["city"])
+        tool_result = get_weather(**tool_input)
     else:
         tool_result = {"error": "Ukendt tool"}
 
